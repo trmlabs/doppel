@@ -96,8 +96,8 @@ kubectl create secret tls shadow-proxy-tls -n starrocks-primary \
 
 # Build and load shadow proxy image
 cd "$SCRIPT_DIR/.."
-GOOS=linux GOARCH=arm64 go build -o starrocks-shadow-proxy . 2>/dev/null || \
-GOOS=linux GOARCH=amd64 go build -o starrocks-shadow-proxy .
+GOOS=linux GOARCH=arm64 go build -o doppel . 2>/dev/null || \
+GOOS=linux GOARCH=amd64 go build -o doppel .
 docker build -t shadow-proxy:latest . -q
 minikube image load shadow-proxy:latest
 cd "$SCRIPT_DIR"

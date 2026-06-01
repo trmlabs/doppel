@@ -45,4 +45,4 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Build
-        run: CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o starrocks-shadow-proxy .
+        run: CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o doppel .

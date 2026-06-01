@@ -1,23 +1,32 @@
-# Shadow Traffic Proxy for StarRocks
+# doppel
 
-[![CI](https://github.com/trmlabs/starrocks-shadow-proxy/actions/workflows/ci.yml/badge.svg)](https://github.com/trmlabs/starrocks-shadow-proxy/actions/workflows/ci.yml)
+[![CI](https://github.com/trmlabs/doppel/actions/workflows/ci.yml/badge.svg)](https://github.com/trmlabs/doppel/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![Go Version](https://img.shields.io/github/go-mod/go-version/trmlabs/starrocks-shadow-proxy)](go.mod)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/trmlabs/doppel)](go.mod)
 
-A protocol-aware proxy that mirrors traffic from a primary database to a shadow database for performance comparison testing. Originally built for StarRocks (MySQL wire protocol); a Postgres / AlloyDB pgwire path is now available — see [docs/POSTGRES.md](docs/POSTGRES.md).
+A wire-protocol-aware proxy that mirrors database traffic from a primary backend to a shadow backend, for upgrade validation, performance comparison, and migration testing.
+
+| Wire protocol | Backends | Default port | Docs |
+|---|---|---|---|
+| MySQL | StarRocks, MySQL | `3306` | this README |
+| pgwire | Postgres, AlloyDB | `5432` | [docs/POSTGRES.md](docs/POSTGRES.md) |
+
+Pick the protocol with `PROTOCOL=mysql` (default) or `PROTOCOL=postgres` (aliases: `pg`, `postgresql`).
 
 ## Why
 
-Upgrading or migrating StarRocks clusters is risky without knowing how the new cluster handles your actual production workload. This proxy lets you:
+Upgrading or migrating a database — StarRocks 3.1 → 3.3, Postgres 15 → 18, an AlloyDB minor — is risky without observing real production traffic against the candidate. Doppel lets you:
 
-- **Compare performance** between StarRocks versions before cutting over
-- **Validate configuration changes** on a shadow cluster with real traffic
-- **Catch regressions** by monitoring P50/P90/P99 latency across both clusters
-- **Analyze query patterns** via optional per-query logging to GCS
+- **Compare performance** between versions before cutting over
+- **Validate configuration or schema changes** on a shadow cluster with real traffic
+- **Catch regressions** by collecting P50/P90/P99 latency on both primary and shadow
+- **Record per-query traces** to GCS for offline analysis in BigQuery
 
-The proxy is transparent to clients -- they connect to it exactly as they would to StarRocks directly. Queries are forwarded synchronously to the primary cluster (zero added latency on the critical path) and mirrored asynchronously to the shadow cluster.
+The proxy is transparent to clients — they connect to it exactly as they would to the primary. Queries hit the primary synchronously (zero added latency on the critical path) and are mirrored asynchronously to the shadow.
 
 ## Quick Start
+
+**MySQL / StarRocks:**
 
 ```bash
 # Start two local StarRocks clusters + the proxy + Prometheus + Grafana
@@ -31,7 +40,19 @@ mysql -h 127.0.0.1 -P 3306 -u root -e "SELECT 1"
 # Grafana:    http://localhost:3000 (admin/admin)
 ```
 
-## Architecture
+**Postgres / AlloyDB:**
+
+```bash
+# Start primary (PG15) + shadow (PG18) + the proxy
+docker compose -f docker-compose.pg.yaml up --build
+
+# Connect through the proxy
+psql "host=127.0.0.1 port=5432 user=postgres dbname=postgres" -c "SELECT 1"
+```
+
+See [docs/POSTGRES.md](docs/POSTGRES.md) for the pgwire-specific docs (TLS, shadow filtering, design decisions, perf notes).
+
+## Architecture (MySQL path)
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
@@ -58,6 +79,8 @@ mysql -h 127.0.0.1 -P 3306 -u root -e "SELECT 1"
 │                                                                                        │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+For the pgwire architecture (two independent TLS hops, frame-level forwarding, COPY fallback), see [docs/POSTGRES.md](docs/POSTGRES.md).
 
 ### MySQL Packet-Based Forwarding
 
@@ -103,18 +126,18 @@ This ensures accurate query counting—every query sent to primary is also sent 
 
 ## Features
 
-- **MySQL Protocol Aware**: Parses MySQL packets to ensure complete commands are forwarded
-- **TLS Termination**: Handles MySQL protocol SSL upgrade (STARTTLS, same as StarRocks FE)
+- **Wire-protocol aware**: MySQL (StarRocks, MySQL) and pgwire (Postgres, AlloyDB)
+- **TLS Termination**: MySQL SSL upgrade (STARTTLS, same pattern as StarRocks FE); for pgwire, independent listener-side and backend-side TLS hops
 - **Zero-latency mirroring**: Forwards queries to primary synchronously, mirrors to shadow asynchronously
-- **1:1 Shadow Workers**: Each client gets a dedicated shadow connection with bounded queue (10K packets)
+- **1:1 Shadow Workers**: Each client gets a dedicated shadow connection with bounded queue (10K packets / frames)
 - **Protocol-Aware Response Parsing**: Reads complete MySQL responses without timeout-based detection
-- **Accurate metrics**: Counts actual MySQL queries (COM_QUERY, COM_STMT_PREPARE, COM_STMT_EXECUTE)
+- **Accurate metrics**: Counts actual MySQL commands (`COM_QUERY`, `COM_STMT_PREPARE`, `COM_STMT_EXECUTE`) and pgwire frames (`Query`, `Parse`, `Bind`, `Execute`, …)
 - **Performance comparison**: Collects P50/P90/P95/P99 latency metrics for both clusters
 - **Graceful Drain**: Ensures all queued queries are processed before shutdown
-- **Transparent**: Clients connect the same way they would to StarRocks directly
+- **Transparent**: Clients connect the same way they would to the primary directly
 - **Query Logging**: Optional per-query logging to GCS for BigQuery analysis (see below)
 
-## How TLS Works
+## How TLS Works (MySQL path)
 
 The proxy implements MySQL protocol SSL upgrade following the same pattern as StarRocks FE:
 
@@ -124,6 +147,8 @@ The proxy implements MySQL protocol SSL upgrade following the same pattern as St
 4. **Decrypted Proxying**: All subsequent traffic is decrypted, forwarded to backends over plain TCP
 
 This allows clients to connect with `--ssl-mode=REQUIRED` while backend connections remain plain TCP.
+
+For pgwire, listener-side and backend-side TLS are independent and env-gated — see [docs/POSTGRES.md](docs/POSTGRES.md).
 
 ## How MySQL Packet Handling Works
 
@@ -168,6 +193,8 @@ The shadow worker uses MySQL protocol parsing to read complete responses without
 This eliminates the need for timeout-based response detection, ensuring accurate latency measurements.
 
 ## Metrics Exposed
+
+Metrics use the `shadow_proxy_` prefix and are shared between the MySQL and pgwire paths where possible. Protocol-specific counters (`shadow_proxy_mysql_*`, `shadow_proxy_pg_*`) are documented in their respective sections.
 
 ### Core Metrics
 
@@ -225,7 +252,7 @@ This eliminates the need for timeout-based response detection, ensuring accurate
 | `shadow_proxy_mysql_commands_total` | MySQL commands by type (labels: `target`, `command=COM_QUERY\|COM_STMT_EXECUTE\|...`) |
 | `shadow_proxy_mysql_packets_total` | Total MySQL packets processed (labels: `target=primary\|shadow`) |
 
-These metrics provide accurate query counting by tracking actual MySQL protocol commands rather than TCP operations.
+These metrics provide accurate query counting by tracking actual MySQL protocol commands rather than TCP operations. The pgwire-specific counterparts (`shadow_proxy_pg_commands_total`, `shadow_proxy_pg_packets_total`) are documented in [docs/POSTGRES.md](docs/POSTGRES.md).
 
 ## Query Logging (GCS → BigQuery)
 
@@ -394,6 +421,14 @@ QUERY_LOG_BATCH_SIZE=1000
 
 ## Environment Variables
 
+For pgwire-specific defaults and TLS variables, see [docs/POSTGRES.md](docs/POSTGRES.md). The variables below apply to the MySQL path unless noted otherwise.
+
+### Protocol Selection
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PROTOCOL` | `mysql` (default) or `postgres` / `pg` / `postgresql` | `mysql` |
+
 ### Connection Settings
 
 | Variable | Description | Default |
@@ -513,8 +548,14 @@ The source is split into focused files within a single `package main`:
 | `metrics.go` | Prometheus metric declarations, `init()` registration, worker registry |
 | `mysql_protocol.go` | MySQL constants, command helpers, `MySQLPacketReader`, packet utilities |
 | `mysql_auth.go` | SSL/TLS detection, handshake modification, scramble extraction, native password |
-| `shadow_worker.go` | `ShadowWorker` — per-client queue, async mirroring, graceful drain |
-| `proxy.go` | `TCPProxy` — connection handling, SSL upgrade, auth, bidirectional proxying |
+| `shadow_worker.go` | `ShadowWorker` — per-client queue, async mirroring, graceful drain (MySQL path) |
+| `proxy.go` | `TCPProxy` — connection handling, SSL upgrade, auth, bidirectional proxying (MySQL path) |
+| `pg_main.go` | pgwire entry point — wired from `main.go` when `PROTOCOL=postgres` |
+| `pg_protocol.go` | pgwire constants, frame reader, message-type helpers |
+| `pg_tls.go` | Listener-side and backend-side TLS handshake helpers |
+| `pg_proxy.go` | `PgProxy` — pgwire connection handling, request/response loop, COPY fallback |
+| `pg_shadow_worker.go` | `PgShadowWorker` — per-client async mirroring for pgwire |
+| `pg_shadow_filter.go` | pgwire-specific shadow filter (sticky-by-statement-name) |
 | `query_filter.go` | Selective query filtering — StarRocks-aware SQL operation detection, regex matching, sampling |
 | `query_logger.go` | Async batched query logging to GCS (JSONL, Hive-partitioned) |
 
@@ -560,6 +601,16 @@ TLS_ENABLED=true docker compose -f docker-compose.local.yaml up --build
 mysql -h 127.0.0.1 -P 3306 -u root --ssl-mode=REQUIRED --ssl-ca=certs/ca.crt
 ```
 
+### Local Testing (Postgres)
+
+```bash
+./test-pg-local.sh           # full cycle, tears down on exit
+./test-pg-local.sh --keep    # leaves the stack running
+
+# With TLS on both hops
+./test-pg-local-tls.sh
+```
+
 ### Build
 
 ```bash
@@ -585,7 +636,7 @@ docker run -d \
   -e SHADOW_PASSWORD=secret \
   -p 3306:3306 \
   -p 9090:9090 \
-  ghcr.io/trmlabs/starrocks-shadow-proxy:latest
+  ghcr.io/trmlabs/doppel:latest
 ```
 
 ### Kubernetes

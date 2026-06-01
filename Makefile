@@ -1,8 +1,8 @@
 .PHONY: build build-linux test test-unit test-integration run clean docker-build docker-push
 
 # Variables
-BINARY_NAME=starrocks-shadow-proxy
-IMAGE_NAME=ghcr.io/trmlabs/starrocks-shadow-proxy
+BINARY_NAME=doppel
+IMAGE_NAME=ghcr.io/trmlabs/doppel
 VERSION?=latest
 
 # Build for current platform
