@@ -45,10 +45,23 @@ Backend / listener (shared with the MySQL path; defaults differ when `PROTOCOL=p
 | `PRIMARY_PASSWORD` | `""` | Same. Inject from Vault in production deployments. |
 | `SHADOW_HOST` | `""` | Shadow backend host. Empty disables shadow mirroring. |
 | `SHADOW_PORT` | `5432` | Shadow backend port. |
+| `SHADOW_USER` | `root` | Currently informational — auth is forwarded transparently. |
+| `SHADOW_PASSWORD` | `""` | Inject from Vault in production deployments. |
 | `METRICS_PORT` | `:9090` | HTTP server for `/metrics`, `/health`, `/ready`. |
 | `QUERY_LOG_GCS_BUCKET` | `""` | GCS bucket for JSONL query logs. Empty = disabled. |
 | `QUERY_LOG_GCS_PREFIX` | `query-logs` | Path prefix within bucket. |
+| `QUERY_LOG_FLUSH_INTERVAL_SECONDS` | `120` | Flush interval (or when batch is full). |
+| `QUERY_LOG_BATCH_SIZE` | `1000` | Max entries before forced flush. |
+| `QUERY_LOG_BUFFER_SIZE` | `10000` | In-memory channel buffer size. |
 | `DEBUG_LOG` | `false` | Verbose per-connection traces. Off by default. |
+
+Shadow worker tunables (also used by the MySQL path):
+
+| Var | Default | Description |
+|---|---|---|
+| `SHADOW_QUEUE_SIZE` | `10000` | Bounded queue per client connection. Frames are dropped when full. |
+| `SHADOW_READ_TIMEOUT_SECONDS` | `30` | Timeout waiting for the shadow backend to respond. |
+| `SHADOW_DRAIN_TIMEOUT_MS` | `60000` | Time allowed to drain pending frames on client disconnect. |
 
 TLS:
 
@@ -81,12 +94,13 @@ The compose file uses vanilla `postgres:*` images so you don't need GCP credenti
 
 pgwire-specific counters:
 
-| Metric | Type | Labels |
-|---|---|---|
-| `shadow_proxy_pg_commands_total` | counter | `target`, `command` (`Query`, `Parse`, `Bind`, `Execute`, …) |
-| `shadow_proxy_pg_packets_total` | counter | `target` |
+| Metric | Type | Labels | Notes |
+|---|---|---|---|
+| `shadow_proxy_pg_commands_total` | counter | `target`, `command` (`Query`, `Parse`, `Bind`, `Execute`, …) | |
+| `shadow_proxy_pg_packets_total` | counter | `target` | |
+| `shadow_proxy_pg_sticky_stmt_map_resets_total` | counter | _(none)_ | Increments when the sticky-statement filter map is reset out-of-band. **Any non-zero rate indicates a session-coherence anomaly and is worth alerting on.** |
 
-The shared `shadow_proxy_query_duration_seconds`, `shadow_proxy_queries_total`, `shadow_proxy_query_errors_total`, and `shadow_proxy_bytes_total{direction}` metrics are reused for the pgwire path with `target="primary"` and `target="shadow"`.
+The shared `shadow_proxy_query_duration_seconds`, `shadow_proxy_queries_total`, `shadow_proxy_query_errors_total`, `shadow_proxy_bytes_total{direction}`, and `shadow_proxy_shadow_dropped_total{reason}` metrics are reused for the pgwire path with `target="primary"` and `target="shadow"`. See the README's Metrics section for the full shared list.
 
 ## Design decisions worth re-litigating
 

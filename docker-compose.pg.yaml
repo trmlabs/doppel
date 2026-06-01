@@ -3,11 +3,11 @@
 # Usage:
 #   docker compose -f docker-compose.pg.yaml up --build
 #
-# Access:
-#   Proxy:         psql -h 127.0.0.1 -p 5432 -U postgres   (sslmode=disable required for MVP)
-#   Primary (PG15): psql -h 127.0.0.1 -p 15432 -U postgres
-#   Shadow  (PG18): psql -h 127.0.0.1 -p 25432 -U postgres
-#   Proxy metrics: http://localhost:9090/metrics
+# Access (PGPASSWORD=trmlabs):
+#   Proxy:          psql "host=127.0.0.1 port=5432 user=postgres dbname=trm sslmode=disable"
+#   Primary (PG15): psql "host=127.0.0.1 port=15432 user=postgres dbname=trm sslmode=disable"
+#   Shadow  (PG18): psql "host=127.0.0.1 port=25432 user=postgres dbname=trm sslmode=disable"
+#   Proxy metrics:  http://localhost:9090/metrics
 #
 # About the database images:
 #   We use vanilla `postgres:15` and `postgres:18` images here. The pgwire
@@ -18,16 +18,11 @@
 #     image: gcr.io/alloydb-omni/alloydb-omni:15.x.x   # primary
 #     image: gcr.io/alloydb-omni/alloydb-omni:16.x.x   # shadow (upgrade target)
 #   AlloyDB Omni docs: https://cloud.google.com/alloydb/omni/docs
-#
-# Note (PR #1 scope):
-#   The proxy currently forwards only to the primary. The "shadow" service is
-#   defined here for the next PR (which wires up async mirroring) but the
-#   proxy ignores SHADOW_HOST until then.
 
 services:
   postgres-primary:
     image: postgres:15-alpine
-    container_name: pg-shadow-proxy-primary
+    container_name: doppel-pg-primary
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: trmlabs
@@ -56,7 +51,7 @@ services:
 
   postgres-shadow:
     image: postgres:18-alpine
-    container_name: pg-shadow-proxy-shadow
+    container_name: doppel-pg-shadow
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: trmlabs
@@ -86,7 +81,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: pg-shadow-proxy
+    container_name: doppel-pg
     environment:
       PROTOCOL: postgres
       LISTEN_ADDR: ":5432"
@@ -98,7 +93,7 @@ services:
       PRIMARY_USER: postgres
       PRIMARY_PASSWORD: trmlabs
 
-      # Shadow: defined for PR #2. Proxy ignores these in PR #1.
+      # Shadow: async-mirrored via PgShadowWorker.
       SHADOW_HOST: postgres-shadow
       SHADOW_PORT: "5432"
       SHADOW_USER: postgres

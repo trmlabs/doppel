@@ -94,9 +94,9 @@ test-integration:
 	@echo "Tests passed!"
 	docker-compose -f docker-compose.test.yaml down -v
 
-# Filter integration test — tests selective query filtering against real StarRocks
-# Runs 4 phases: baseline, operation filter, pattern filter, include-only
-# Requires: shadow-proxy:local-filter Docker image (build with make docker-build)
+# Filter integration test — tests selective query filtering against real StarRocks (MySQL path).
+# Runs 4 phases: baseline, operation filter, pattern filter, include-only.
+# Builds its own Docker image (default tag: doppel:filter-test); see test-filter-integration.sh.
 test-filter:
 	@echo "Running filter integration tests (real StarRocks)..."
 	./test-filter-integration.sh

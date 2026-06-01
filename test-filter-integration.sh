@@ -22,7 +22,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
 COMPOSE_FILE="docker-compose.local.yaml"
-PROXY_IMAGE="${PROXY_IMAGE:-shadow-proxy:filter-test}"
+PROXY_IMAGE="${PROXY_IMAGE:-doppel:filter-test}"
 NETWORK="doppel_sr-network"
 PROXY_HOST="127.0.0.1"
 PROXY_PORT="3306"

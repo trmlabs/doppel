@@ -47,7 +47,7 @@ spec:
     spec:
       containers:
         - name: shadow-proxy
-          image: shadow-proxy:latest
+          image: doppel:latest
           imagePullPolicy: Never  # Use local image
           ports:
             - name: mysql

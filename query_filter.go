@@ -1,7 +1,10 @@
 // query_filter.go — Selective query filtering for shadow mirroring.
-// Supports filtering by SQL operation type, regex patterns on full query text,
-// and random sampling. StarRocks-aware: handles multi-statement queries where
-// SET CATALOG / USE appear before the primary operation.
+//
+// The filter API is protocol-agnostic and is invoked by both the MySQL and
+// pgwire shadow workers. The SQL-parsing primitives below are StarRocks-flavored
+// for COM_QUERY content (handling multi-statement queries where SET CATALOG /
+// USE appear before the primary operation); for the pgwire path, see
+// pg_shadow_filter.go for the sticky-by-statement-name layering on top.
 package main
 
 import (

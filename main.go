@@ -1,5 +1,7 @@
-// main.go — Entry point for the StarRocks shadow traffic proxy. Loads configuration,
-// starts the health checker, metrics HTTP server, and the TCP proxy.
+// main.go — Entry point for doppel, a wire-protocol-aware shadow proxy for
+// MySQL/StarRocks and Postgres/AlloyDB. Loads configuration, starts the health
+// checker, metrics HTTP server, and dispatches to the MySQL or pgwire path
+// based on PROTOCOL.
 package main
 
 import (
@@ -27,7 +29,8 @@ func main() {
 		log.Fatal("PRIMARY_HOST is required")
 	}
 
-	// Dispatch on protocol. Postgres MVP runs in transparent-forward mode (no shadow yet).
+	// Dispatch on protocol. Both paths support shadow mirroring; the pg path
+	// is run from runPostgresProxy in pg_main.go.
 	if isPostgresProtocol(config.Protocol) {
 		runPostgresProxy(config)
 		return

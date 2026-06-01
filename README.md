@@ -47,7 +47,7 @@ mysql -h 127.0.0.1 -P 3306 -u root -e "SELECT 1"
 docker compose -f docker-compose.pg.yaml up --build
 
 # Connect through the proxy
-psql "host=127.0.0.1 port=5432 user=postgres dbname=postgres" -c "SELECT 1"
+PGPASSWORD=trmlabs psql "host=127.0.0.1 port=5432 user=postgres dbname=trm" -c "SELECT 1"
 ```
 
 See [docs/POSTGRES.md](docs/POSTGRES.md) for the pgwire-specific docs (TLS, shadow filtering, design decisions, perf notes).
@@ -244,6 +244,7 @@ Metrics use the `shadow_proxy_` prefix and are shared between the MySQL and pgwi
 |--------|-------------|
 | `shadow_proxy_queue_drops_total` | Queries dropped due to full shadow queue |
 | `shadow_proxy_queue_depth` | Current queue depth (sum across all workers) |
+| `shadow_proxy_shadow_dropped_total` | Queries dropped before reaching the shadow (labels: `reason=conn_dead\|...`) |
 
 ### MySQL Command Metrics
 
@@ -314,7 +315,7 @@ Each log entry contains:
 | `ts` | string | ISO8601 timestamp (e.g., `2026-02-05T14:30:25.123Z`) |
 | `query_id` | string | UUID for correlating primary ↔ shadow entries |
 | `target` | string | `"primary"` or `"shadow"` |
-| `command` | string | MySQL command (e.g., `COM_QUERY`, `COM_PING`) |
+| `command` | string | MySQL command (`COM_QUERY`, `COM_PING`, …) on the MySQL path; pgwire frame name (`Query`, `Parse`, `Bind`, `Execute`, …) on the pgwire path |
 | `query_text` | string | Full SQL query text (only for `COM_QUERY`) |
 | `duration_ms` | float | Execution time in milliseconds |
 | `bytes_sent` | int | Bytes sent to target |
@@ -421,7 +422,7 @@ QUERY_LOG_BATCH_SIZE=1000
 
 ## Environment Variables
 
-For pgwire-specific defaults and TLS variables, see [docs/POSTGRES.md](docs/POSTGRES.md). The variables below apply to the MySQL path unless noted otherwise.
+The variables below apply to both protocols, except where labeled (MySQL only) or (pgwire only). Defaults can differ when `PROTOCOL=postgres` — for instance `LISTEN_ADDR` defaults to `:5432` and `PRIMARY_PORT` to `5432`. For pgwire-specific TLS variables and behavioral notes, see [docs/POSTGRES.md](docs/POSTGRES.md).
 
 ### Protocol Selection
 
@@ -629,6 +630,7 @@ make docker-release-arm64
 ### Docker
 
 ```bash
+# MySQL / StarRocks
 docker run -d \
   -e PRIMARY_HOST=primary-starrocks-fe \
   -e PRIMARY_PASSWORD=secret \
@@ -637,9 +639,20 @@ docker run -d \
   -p 3306:3306 \
   -p 9090:9090 \
   ghcr.io/trmlabs/doppel:latest
+
+# Postgres / AlloyDB
+docker run -d \
+  -e PROTOCOL=postgres \
+  -e PRIMARY_HOST=primary-db.example.com \
+  -e PRIMARY_TLS_ENABLED=true \
+  -e SHADOW_HOST=shadow-db.example.com \
+  -e SHADOW_TLS_ENABLED=true \
+  -p 5432:5432 \
+  -p 9090:9090 \
+  ghcr.io/trmlabs/doppel:latest
 ```
 
-### Kubernetes
+### Kubernetes (MySQL / StarRocks example)
 
 The `minikube/` directory contains a complete working example with:
 - Primary and shadow StarRocks clusters (via the StarRocks Operator)

@@ -25,9 +25,9 @@ import (
 // lifecycle (signal handling, listener startup, graceful shutdown).
 //
 // Differences vs. the MySQL path (main.go):
-//   - No SHADOW_HOST validation: PR #1 only does primary forwarding.
+//   - SHADOW_HOST is optional. When unset, the proxy runs primary-only and the
+//     health checker skips the shadow probe.
 //   - PgProxy is constructed instead of TCPProxy.
-//   - Health checker only checks the primary if SHADOW_HOST is unset.
 func runPostgresProxy(config *Config) {
 	log.Printf("Configuration (postgres):")
 	log.Printf("  Protocol:           %s", config.Protocol)

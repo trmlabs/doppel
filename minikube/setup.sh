@@ -1,5 +1,5 @@
 #!/bin/bash
-# One-click Minikube setup for StarRocks Shadow Proxy testing
+# One-click Minikube setup for doppel (MySQL/StarRocks path) testing
 # Prerequisites: Docker Desktop with 12GB+ memory, minikube, kubectl, helm
 
 set -e
@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 echo "============================================="
-echo "StarRocks Shadow Proxy - Minikube Setup"
+echo "Doppel (MySQL/StarRocks path) - Minikube Setup"
 echo "============================================="
 
 # Check prerequisites
@@ -98,8 +98,8 @@ kubectl create secret tls shadow-proxy-tls -n starrocks-primary \
 cd "$SCRIPT_DIR/.."
 GOOS=linux GOARCH=arm64 go build -o doppel . 2>/dev/null || \
 GOOS=linux GOARCH=amd64 go build -o doppel .
-docker build -t shadow-proxy:latest . -q
-minikube image load shadow-proxy:latest
+docker build -t doppel:latest . -q
+minikube image load doppel:latest
 cd "$SCRIPT_DIR"
 
 # Deploy shadow proxy
@@ -151,7 +151,7 @@ echo ""
 echo "Grafana Dashboard:"
 echo "  URL: http://localhost:3000"
 echo "  Login: admin / admin"
-echo "  Dashboard: StarRocks Shadow Proxy - Latency Comparison"
+echo "  Dashboard: Doppel - Latency Comparison"
 echo ""
 echo "Shadow Proxy (TLS):"
 echo "  mysql -h 127.0.0.1 -P 3306 -u root --ssl-mode=REQUIRED --ssl-ca=$SCRIPT_DIR/certs/ca.crt"
