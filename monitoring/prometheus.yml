@@ -1,5 +1,6 @@
-# Prometheus configuration for StarRocks shadow proxy testing
-# Scrapes metrics from both clusters and the shadow proxy
+# Prometheus configuration for doppel (MySQL/StarRocks path) shadow-proxy testing.
+# Scrapes metrics from both clusters and the shadow proxy. Metric names are
+# protocol-agnostic; alerts in prometheus-alerts.yml fire for both paths.
 
 global:
   scrape_interval: 5s

@@ -1,5 +1,6 @@
-# Prometheus alerting rules for StarRocks shadow proxy
-# Load via rule_files in prometheus.yml
+# Prometheus alerting rules for doppel (MySQL + pgwire). Metric names are
+# protocol-agnostic; rules apply equally to both paths.
+# Load via rule_files in prometheus.yml.
 
 groups:
   - name: shadow_proxy_alerts

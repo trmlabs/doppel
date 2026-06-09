@@ -1,15 +1,18 @@
 // pg_proxy.go — PostgreSQL wire-protocol shadow proxy.
 //
-// MVP scope (PR #1):
-//   - Forwards bytes between a client and the primary AlloyDB without modification.
-//   - Parses frontend messages for per-query timing and structured logging.
-//   - Records per-query latency by waiting for the backend's ReadyForQuery 'Z'.
-//   - Does NOT terminate TLS — clients must connect with sslmode=disable.
-//   - Does NOT mirror to a shadow cluster — that lands in PR #2 by wiring up
-//     ShadowWorker (already implemented for the MySQL path).
-//   - Does NOT support COPY with timing — the proxy gracefully degrades to plain
-//     bidirectional io.Copy if it observes a CopyInResponse / CopyOutResponse,
-//     sacrificing timing for that connection but staying correct.
+// Behavior:
+//   - Parses each pgwire frontend message (Query, Parse, Bind, Execute, ...) and
+//     records per-query latency by waiting for the backend's ReadyForQuery 'Z'.
+//   - Optionally terminates client TLS (gated on TLS_ENABLED) — replies 'S' to a
+//     client SSLRequest and wraps the connection in tls.Server.
+//   - Optionally initiates backend TLS (gated on PRIMARY_TLS_ENABLED) before
+//     forwarding any pgwire framing. Required against AlloyDB.
+//   - Mirrors every frontend frame asynchronously to a configured shadow backend
+//     via PgShadowWorker, honoring the SHADOW_FILTER_* env vars and per-connection
+//     sampling.
+//   - Falls back to plain bidirectional io.Copy on COPY mode (CopyInResponse /
+//     CopyOutResponse), sacrificing per-query timing for that connection but
+//     staying correct.
 package main
 
 import (

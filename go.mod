@@ -1,4 +1,4 @@
-module github.com/trmlabs/starrocks-shadow-proxy
+module github.com/trmlabs/doppel
 
 go 1.24.0
 

@@ -43,8 +43,8 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            ghcr.io/trmlabs/starrocks-shadow-proxy:${{ steps.version.outputs.tag }}
-            ghcr.io/trmlabs/starrocks-shadow-proxy:latest
+            ghcr.io/trmlabs/doppel:${{ steps.version.outputs.tag }}
+            ghcr.io/trmlabs/doppel:latest
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

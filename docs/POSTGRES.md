@@ -1,38 +1,30 @@
 # Postgres / AlloyDB shadow proxy
 
-This document covers the pgwire path. For the original StarRocks/MySQL path see the top-level [README](../README.md).
+This document covers the pgwire path. For the MySQL / StarRocks path see the top-level [README](../README.md).
 
-## What it does (PR #1 scope)
+## What it does
 
 A pgwire-aware TCP proxy that:
 
 - Accepts client connections on `:5432`.
 - Opens a TCP connection to a single primary AlloyDB / Postgres backend.
 - Forwards the startup/auth handshake transparently — no auth termination.
-- Inspects each frontend message (Query, Parse, Bind, Execute, …), times the request/response round-trip, and emits per-query Prometheus metrics + an optional GCS log entry.
-- Falls back to plain bidirectional `io.Copy` if the connection enters COPY mode (CopyInResponse / CopyOutResponse), sacrificing per-query timing for that connection.
+- Inspects each frontend message (`Query`, `Parse`, `Bind`, `Execute`, …), times the request/response round-trip, and emits per-query Prometheus metrics + an optional GCS log entry.
+- Mirrors each frontend frame asynchronously to a configured shadow backend (`PgShadowWorker`), with the same filter / sampling controls as the MySQL path. Per-query duration, errors, and bytes are recorded under `target="shadow"` for direct comparison against `target="primary"`.
+- Falls back to plain bidirectional `io.Copy` if the connection enters COPY mode (`CopyInResponse` / `CopyOutResponse`), sacrificing per-query timing for that connection.
 
-**Not in PR #1 (deliberately):**
+### TLS
 
-- No shadow mirroring. The `SHADOW_HOST` env var is read but unused. PR #2 wires up `ShadowWorker` to async-mirror frontend messages to a second backend.
-- No HA. Single replica only. Fine for staging at our QPS; needs multi-replica + connection-aware LB before customer traffic.
-- No sampling. PR #2 adds connection-level sampling so we can throttle shadow load if needed.
+Listener-side and backend-side TLS are **independent** and env-gated:
 
-**Added in the TLS follow-up (commit 459946d):**
+- **Listener-side TLS termination** (`TLS_ENABLED=true`) — the proxy replies `'S'` to a client `SSLRequest` and wraps the connection in `tls.Server` using the configured cert + key.
+- **Backend-side TLS initiation** (`PRIMARY_TLS_ENABLED=true`) — before forwarding any pgwire framing, the proxy sends its own `SSLRequest` to the primary and wraps the connection in `tls.Client`. Required against AlloyDB, whose `pg_hba` refuses plaintext.
 
-- Listener-side TLS termination (gated on `TLS_ENABLED=true`) — the proxy
-  replies `'S'` to client `SSLRequest` and wraps the connection in
-  `tls.Server` using the configured cert + key.
-- Backend-side TLS initiation (gated on `PRIMARY_TLS_ENABLED=true`) — before
-  forwarding any pgwire framing, the proxy sends its own `SSLRequest` to the
-  primary and wraps the connection in `tls.Client`. Required for AlloyDB,
-  whose `pg_hba` refuses plaintext.
+A common AlloyDB production posture is `TLS_ENABLED=false` (pgbouncer → proxy stays plaintext within the VPC) and `PRIMARY_TLS_ENABLED=true` (proxy → AlloyDB is TLS). Local development against `docker-compose.pg-tls.yaml` sets both to true to mirror a future cert-fronted deploy.
 
-The two hops are independent. A common AlloyDB production posture is
-`TLS_ENABLED=false` (pgbouncer → proxy stays plaintext within the VPC) and
-`PRIMARY_TLS_ENABLED=true` (proxy → AlloyDB is TLS). Local development
-against `docker-compose.pg-tls.yaml` sets both to true to mirror a future
-cert-fronted deploy.
+### Not in scope
+
+- **HA**: single replica only. Fine for staging at our QPS; needs multi-replica + connection-aware LB before customer traffic.
 
 ## Environment variables
 
@@ -51,11 +43,25 @@ Backend / listener (shared with the MySQL path; defaults differ when `PROTOCOL=p
 | `PRIMARY_PORT` | `5432` | Primary backend port. |
 | `PRIMARY_USER` | `root` | Currently informational — auth is forwarded transparently. |
 | `PRIMARY_PASSWORD` | `""` | Same. Inject from Vault in production deployments. |
-| `SHADOW_HOST` | `""` | Read but unused in PR #1. |
+| `SHADOW_HOST` | `""` | Shadow backend host. Empty disables shadow mirroring. |
+| `SHADOW_PORT` | `5432` | Shadow backend port. |
+| `SHADOW_USER` | `root` | Currently informational — auth is forwarded transparently. |
+| `SHADOW_PASSWORD` | `""` | Inject from Vault in production deployments. |
 | `METRICS_PORT` | `:9090` | HTTP server for `/metrics`, `/health`, `/ready`. |
 | `QUERY_LOG_GCS_BUCKET` | `""` | GCS bucket for JSONL query logs. Empty = disabled. |
 | `QUERY_LOG_GCS_PREFIX` | `query-logs` | Path prefix within bucket. |
+| `QUERY_LOG_FLUSH_INTERVAL_SECONDS` | `120` | Flush interval (or when batch is full). |
+| `QUERY_LOG_BATCH_SIZE` | `1000` | Max entries before forced flush. |
+| `QUERY_LOG_BUFFER_SIZE` | `10000` | In-memory channel buffer size. |
 | `DEBUG_LOG` | `false` | Verbose per-connection traces. Off by default. |
+
+Shadow worker tunables (also used by the MySQL path):
+
+| Var | Default | Description |
+|---|---|---|
+| `SHADOW_QUEUE_SIZE` | `10000` | Bounded queue per client connection. Frames are dropped when full. |
+| `SHADOW_READ_TIMEOUT_SECONDS` | `30` | Timeout waiting for the shadow backend to respond. |
+| `SHADOW_DRAIN_TIMEOUT_MS` | `60000` | Time allowed to drain pending frames on client disconnect. |
 
 TLS:
 
@@ -77,27 +83,31 @@ Vault integration for secrets is a deployment concern — the proxy reads plain 
 ```bash
 ./test-pg-local.sh           # full cycle, tears down on exit
 ./test-pg-local.sh --keep    # leaves the stack running
+./test-pg-local-tls.sh       # both TLS hops enabled
 ```
 
-The script uses `docker-compose.pg.yaml`, which starts `postgres:15` (primary) and `postgres:18` (shadow, present for PR #2) plus the proxy. The proxy listens on `127.0.0.1:5432`; primary and shadow are exposed on `15432` / `25432` so you can `psql` either side directly for comparison.
+The script uses `docker-compose.pg.yaml`, which starts `postgres:15` (primary) and `postgres:18` (shadow) plus the proxy. The proxy listens on `127.0.0.1:5432`; primary and shadow are exposed on `15432` / `25432` so you can `psql` either side directly for comparison.
 
 The compose file uses vanilla `postgres:*` images so you don't need GCP credentials for local testing. To exercise AlloyDB-specific behavior (ColumnarEngine, IndexAdvisor, etc.), swap them for `gcr.io/alloydb-omni/alloydb-omni:*` tags. Wire-protocol behavior is identical between vanilla Postgres and AlloyDB Omni.
 
-## Metrics added in this PR
+## Metrics
 
-| Metric | Type | Labels |
-|---|---|---|
-| `shadow_proxy_pg_commands_total` | counter | `target`, `command` (Query, Parse, Bind, Execute, …) |
-| `shadow_proxy_pg_packets_total` | counter | `target` |
+pgwire-specific counters:
 
-The existing `shadow_proxy_query_duration_seconds`, `shadow_proxy_queries_total`, `shadow_proxy_query_errors_total`, and `shadow_proxy_bytes_total{direction}` metrics are reused for the pgwire path with `target="primary"`.
+| Metric | Type | Labels | Notes |
+|---|---|---|---|
+| `shadow_proxy_pg_commands_total` | counter | `target`, `command` (`Query`, `Parse`, `Bind`, `Execute`, …) | |
+| `shadow_proxy_pg_packets_total` | counter | `target` | |
+| `shadow_proxy_pg_sticky_stmt_map_resets_total` | counter | _(none)_ | Increments when the sticky-statement filter map is reset out-of-band. **Any non-zero rate indicates a session-coherence anomaly and is worth alerting on.** |
+
+The shared `shadow_proxy_query_duration_seconds`, `shadow_proxy_queries_total`, `shadow_proxy_query_errors_total`, `shadow_proxy_bytes_total{direction}`, and `shadow_proxy_shadow_dropped_total{reason}` metrics are reused for the pgwire path with `target="primary"` and `target="shadow"`. See the README's Metrics section for the full shared list.
 
 ## Design decisions worth re-litigating
 
-- **Single-goroutine request/response loop**: simpler and gives accurate per-query timing, but breaks pgwire pipelining (Parse+Bind+Execute+Sync as a single batch is fine because we wait for ReadyForQuery; concurrent queries on one connection are not supported but pg drivers don't do that). If we hit a pipelining-heavy workload, revisit with a duplex parser.
+- **Single-goroutine request/response loop**: simpler and gives accurate per-query timing, but breaks pgwire pipelining (Parse+Bind+Execute+Sync as a single batch is fine because we wait for `ReadyForQuery`; concurrent queries on one connection are not supported but pg drivers don't do that). If we hit a pipelining-heavy workload, revisit with a duplex parser.
 - **Hand-rolled wire parser**: ~150 LOC, no `pgproto3` dependency. If the parser grows complex (e.g. when adding SCRAM auth termination), switch to `github.com/jackc/pgx/v5/pgproto3`.
 - **COPY fallback**: we lose timing for COPY connections rather than implementing CopyData state-machine handling. cobalt does not use COPY, so this is acceptable for the upgrade-validation use case. Document and revisit if a COPY-heavy caller appears.
-- **No auth termination**: keeps the proxy stateless and lets it work with any auth scheme the backend supports (cleartext, MD5, SCRAM, IAM tokens via `cloud-sql-proxy`-injected creds). The cost is that shadow auth in PR #2 needs to be configurable separately — likely shadow-side Vault creds.
+- **No auth termination**: keeps the proxy stateless and lets it work with any auth scheme the backend supports (cleartext, MD5, SCRAM, IAM tokens via `cloud-sql-proxy`-injected creds). The cost is that shadow auth needs to be configurable separately — typically shadow-side Vault creds.
 
 ## Shadow query filtering and sampling
 
@@ -134,7 +144,7 @@ This is **not** a hot spot we can micro-optimize away in our code:
 
 - **Not query hashing.** `crypto/md5.Sum` is well below 1% of CPU; the per-message hashing the proxy does for log correlation is in the noise.
 - **Not TLS handshakes.** `tls.handshakeContext` is 0.29 s cum (8%). Handshakes amortize across the lifetime of a long-lived client connection — at 128 concurrent connections held open by `pgbench`, there's effectively one handshake per connection over the whole 30 s window.
-- **Not the shadow worker.** `PgShadowWorker.processFrame` is 1.7% cumulative; mirroring overhead is sub-noise on the primary path (see PR #9's c−b column).
+- **Not the shadow worker.** `PgShadowWorker.processFrame` is 1.7% cumulative; mirroring overhead is sub-noise on the primary path.
 
 It **is** fundamental to Go's `crypto/tls` read path under many concurrent connections: epoll syscalls + the TLS record-layer decrypt loop in `(*Conn).Read`. Real options if this becomes a bottleneck:
 

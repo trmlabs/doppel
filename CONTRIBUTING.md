@@ -1,4 +1,4 @@
-# Contributing to StarRocks Shadow Proxy
+# Contributing to doppel
 
 Thank you for your interest in contributing! This document provides guidelines for contributing to the project.
 
@@ -62,7 +62,7 @@ See the [README](README.md) for more details on local testing with and without T
 
 ## Reporting Issues
 
-Open a [GitHub issue](https://github.com/trmlabs/starrocks-shadow-proxy/issues) with:
+Open a [GitHub issue](https://github.com/trmlabs/doppel/issues) with:
 
 - A clear description of the problem
 - Steps to reproduce

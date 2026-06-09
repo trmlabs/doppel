@@ -49,13 +49,12 @@ else
   docker compose -f "${COMPOSE_FILE}" up --build -d
 fi
 
-# Wait for backends to be healthy. The proxy will be brought up too but its
-# health is reported separately and we tolerate it being unready (current
-# transparent-forward proxy will be unhealthy against a TLS-required backend).
+# Wait for backends to be healthy. The proxy is brought up alongside them and
+# its health is checked separately in Phase 3.
 echo "==> Waiting for TLS backends to become healthy (up to 90s)..."
 for i in {1..90}; do
-  primary_healthy=$(docker inspect --format='{{.State.Health.Status}}' pg-shadow-proxy-primary-tls 2>/dev/null || echo "starting")
-  shadow_healthy=$(docker inspect --format='{{.State.Health.Status}}' pg-shadow-proxy-shadow-tls 2>/dev/null || echo "starting")
+  primary_healthy=$(docker inspect --format='{{.State.Health.Status}}' doppel-pg-primary-tls 2>/dev/null || echo "starting")
+  shadow_healthy=$(docker inspect --format='{{.State.Health.Status}}' doppel-pg-shadow-tls 2>/dev/null || echo "starting")
   if [[ "$primary_healthy" == "healthy" && "$shadow_healthy" == "healthy" ]]; then
     echo "    primary + shadow healthy after ${i}s"
     break
@@ -112,7 +111,7 @@ if [[ "${SKIP_PROXY}" == true ]]; then
 fi
 
 echo
-echo "==> Waiting for proxy /health (up to 30s; may stay unhealthy in PR #1)..."
+echo "==> Waiting for proxy /health (up to 30s)..."
 proxy_ok=false
 for i in {1..30}; do
   if curl -sf "${METRICS_URL%/metrics}/health" >/dev/null 2>&1; then
@@ -123,14 +122,13 @@ for i in {1..30}; do
   sleep 1
 done
 if [[ "$proxy_ok" == false ]]; then
-  echo "    proxy never came up — that's expected if the build doesn't yet"
-  echo "    support TLS termination. Run with --skip-proxy to bypass."
+  echo "    proxy never came up. Capturing logs:"
   docker compose -f "${COMPOSE_FILE}" logs shadow-proxy-tls | tail -30
   exit 1
 fi
 
 echo
-echo "==> Phase 3: proxy sslmode=require (passes once TLS termination is wired)"
+echo "==> Phase 3: proxy sslmode=require (must pass — listener TLS + backend TLS)"
 set +e
 proxy_out=$(psql "host=${PRIMARY_HOST} port=${PROXY_PORT} user=postgres dbname=trm sslmode=require" \
     --set=ON_ERROR_STOP=1 --no-psqlrc -t -A \
@@ -138,7 +136,7 @@ proxy_out=$(psql "host=${PRIMARY_HOST} port=${PROXY_PORT} user=postgres dbname=t
 proxy_rc=$?
 set -e
 if [[ $proxy_rc -ne 0 ]]; then
-  echo "FAIL (expected until TLS termination lands):"
+  echo "FAIL — proxy did not accept sslmode=require:"
   echo "${proxy_out}"
   echo
   echo "==> Diagnostic — proxy logs:"
@@ -148,18 +146,22 @@ fi
 echo "    OK — ${proxy_out}"
 
 echo
-echo "==> Phase 4: proxy sslmode=disable (must fail once TLS-only enforcement is wired)"
+# NOTE: Phase 4 currently asserts *backend* posture, not proxy enforcement.
+# The proxy does not refuse plaintext clients itself when TLS_ENABLED=true;
+# this passes because the AlloyDB-style backend pg_hba rejects plaintext.
+# Tracked separately as a hardening follow-up.
+echo "==> Phase 4: proxy sslmode=disable (must fail — backend pg_hba refuses plaintext)"
 set +e
 plain_proxy=$(psql "host=${PRIMARY_HOST} port=${PROXY_PORT} user=postgres dbname=trm sslmode=disable" \
     --set=ON_ERROR_STOP=1 --no-psqlrc -c "SELECT 1;" 2>&1)
 plain_proxy_rc=$?
 set -e
 if [[ $plain_proxy_rc -eq 0 ]]; then
-  echo "FAIL: proxy accepted plaintext — should refuse like the backend does"
+  echo "FAIL: plaintext succeeded — backend may be misconfigured (pg_hba should require TLS)"
   echo "Output: ${plain_proxy}"
   exit 1
 fi
-echo "    OK — proxy refused plaintext"
+echo "    OK — plaintext refused (by backend)"
 
 echo
 echo "==> Sampling proxy metrics..."

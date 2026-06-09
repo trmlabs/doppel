@@ -1,8 +1,8 @@
 .PHONY: build build-linux test test-unit test-integration run clean docker-build docker-push
 
 # Variables
-BINARY_NAME=starrocks-shadow-proxy
-IMAGE_NAME=ghcr.io/trmlabs/starrocks-shadow-proxy
+BINARY_NAME=doppel
+IMAGE_NAME=ghcr.io/trmlabs/doppel
 VERSION?=latest
 
 # Build for current platform
@@ -94,9 +94,9 @@ test-integration:
 	@echo "Tests passed!"
 	docker-compose -f docker-compose.test.yaml down -v
 
-# Filter integration test — tests selective query filtering against real StarRocks
-# Runs 4 phases: baseline, operation filter, pattern filter, include-only
-# Requires: shadow-proxy:local-filter Docker image (build with make docker-build)
+# Filter integration test — tests selective query filtering against real StarRocks (MySQL path).
+# Runs 4 phases: baseline, operation filter, pattern filter, include-only.
+# Builds its own Docker image (default tag: doppel:filter-test); see test-filter-integration.sh.
 test-filter:
 	@echo "Running filter integration tests (real StarRocks)..."
 	./test-filter-integration.sh

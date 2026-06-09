@@ -22,8 +22,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
 COMPOSE_FILE="docker-compose.local.yaml"
-PROXY_IMAGE="${PROXY_IMAGE:-shadow-proxy:filter-test}"
-NETWORK="starrocks-shadow-proxy_sr-network"
+PROXY_IMAGE="${PROXY_IMAGE:-doppel:filter-test}"
+NETWORK="doppel_sr-network"
 PROXY_HOST="127.0.0.1"
 PROXY_PORT="3306"
 METRICS_URL="http://127.0.0.1:9090/metrics"
@@ -142,9 +142,9 @@ if [ -z "${SKIP_BUILD:-}" ]; then
         echo "  docker build -f - -t $PROXY_IMAGE . <<< 'FROM alpine:3.21"
         echo "  RUN apk --no-cache add ca-certificates && adduser -D -u 1000 appuser"
         echo "  WORKDIR /app"
-        echo "  COPY /tmp/proxy ./starrocks-shadow-proxy"
+        echo "  COPY /tmp/proxy ./doppel"
         echo "  USER appuser"
-        echo "  ENTRYPOINT [\"./starrocks-shadow-proxy\"]'"
+        echo "  ENTRYPOINT [\"./doppel\"]'"
         exit 1
     fi
 fi

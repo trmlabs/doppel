@@ -30,8 +30,8 @@ req_extensions = req_ext
 C = US
 ST = California
 L = San Francisco
-O = Shadow Proxy
-CN = starrocks
+O = Doppel
+CN = doppel
 
 [req_ext]
 subjectAltName = @alt_names
@@ -60,7 +60,7 @@ openssl x509 -req -days 365 -in server.csr \
 
 # Create PKCS12 keystore for StarRocks FE (requires Java keystore format)
 openssl pkcs12 -export -in server.crt -inkey server.key \
-    -out keystore.p12 -name starrocks \
+    -out keystore.p12 -name doppel \
     -CAfile ca.crt -caname root \
     -password pass:changeit
 

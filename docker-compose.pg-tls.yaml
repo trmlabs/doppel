@@ -34,7 +34,7 @@ services:
 
   postgres-primary-tls:
     image: postgres:15-alpine
-    container_name: pg-shadow-proxy-primary-tls
+    container_name: doppel-pg-primary-tls
     depends_on:
       certs-init:
         condition: service_completed_successfully
@@ -78,7 +78,7 @@ services:
 
   postgres-shadow-tls:
     image: postgres:18-alpine
-    container_name: pg-shadow-proxy-shadow-tls
+    container_name: doppel-pg-shadow-tls
     depends_on:
       certs-init:
         condition: service_completed_successfully
@@ -122,7 +122,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: pg-shadow-proxy-tls
+    container_name: doppel-pg-tls
     environment:
       PROTOCOL: postgres
       LISTEN_ADDR: ":5432"

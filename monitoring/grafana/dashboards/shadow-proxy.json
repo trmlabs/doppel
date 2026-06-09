@@ -35,7 +35,7 @@
                     "language": "plaintext",
                     "showLineNumbers": false
                 },
-                "content": "# StarRocks Shadow Proxy - Cluster Comparison\n**Environment**: ${env} | **Primary**: ${primary_cluster} (blue) | **Shadow**: ${shadow_cluster} (orange)\n\nCompare query latency, throughput, and resource usage between primary and shadow clusters.",
+                "content": "# Doppel - Cluster Comparison\n**Environment**: ${env} | **Primary**: ${primary_cluster} (blue) | **Shadow**: ${shadow_cluster} (orange)\n\nCompare query latency, throughput, and resource usage between primary and shadow clusters.",
                 "mode": "markdown"
             },
             "type": "text"
@@ -7195,7 +7195,7 @@
     },
     "timepicker": {},
     "timezone": "",
-    "title": "StarRocks Shadow Proxy - Cluster Comparison",
+    "title": "Doppel - Cluster Comparison",
     "uid": "starrocks-shadow-comparison",
     "version": 1,
     "weekStart": ""

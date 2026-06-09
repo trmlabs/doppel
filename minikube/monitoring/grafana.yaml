@@ -377,7 +377,7 @@ data:
       "time": { "from": "now-15m", "to": "now" },
       "timepicker": {},
       "timezone": "",
-      "title": "StarRocks Shadow Proxy - Latency Comparison",
+      "title": "Doppel - Latency Comparison",
       "uid": "shadow-proxy-comparison",
       "version": 1,
       "weekStart": ""

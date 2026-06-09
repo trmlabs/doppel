@@ -2,6 +2,8 @@
 
 This guide describes common patterns for analyzing query logs produced by the shadow proxy.
 
+> **Protocol note:** The example queries below filter on `command = 'COM_QUERY'`, which is MySQL-specific. On the pgwire path, the `command` column holds pgwire frame names (`Query`, `Parse`, `Bind`, `Execute`, …) — add `OR command IN ('Query','Parse')` (or whatever subset you care about) to the filter when querying pgwire logs. Other columns are protocol-agnostic.
+
 ## Analyzing Query Logs with BigQuery
 
 The proxy writes JSONL query logs to GCS with Hive-style partitioning. BigQuery can query these directly as an external table with automatic partition pruning.
@@ -161,7 +163,7 @@ GROUP BY dt
 ORDER BY dt;
 ```
 
-## Using StarRocks Execution Profiles
+## Using StarRocks Execution Profiles (MySQL path)
 
 For queries that show significant latency differences, StarRocks execution profiles provide deeper insight.
 

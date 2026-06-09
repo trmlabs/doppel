@@ -21,8 +21,9 @@ What you expected to happen.
 **Environment**
 - OS: [e.g., Linux, macOS]
 - Go version: [e.g., 1.24]
-- StarRocks version: [e.g., 3.3.x]
-- Shadow Proxy version/commit: [e.g., v1.0.0]
+- Backend version: [e.g., StarRocks 3.3.x, Postgres 15, AlloyDB Omni 16]
+- Protocol: [mysql or postgres]
+- Doppel version/commit: [e.g., v1.0.0]
 - Deployment: [e.g., Docker, Kubernetes, binary]
 
 **Logs**
