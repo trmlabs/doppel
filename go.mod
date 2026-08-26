@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	cloud.google.com/go/storage v1.43.0
 	github.com/google/uuid v1.6.0
-	github.com/jackc/pgx/v5 v5.7.5
+	github.com/jackc/pgx/v5 v5.9.2
 	github.com/prometheus/client_golang v1.19.0
 	github.com/prometheus/client_model v0.6.0
 )
