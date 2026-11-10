@@ -114,7 +114,7 @@ func (p *PgProxy) handleConnection(client net.Conn, logger *QueryLogger) {
 	defer primary.Close()
 
 	// Backend TLS must be established before any pgwire framing.
-	var primaryConn net.Conn = primary
+	primaryConn := primary
 	if p.backendTLS != nil {
 		tlsConn, err := upgradeBackendTLS(primary, p.backendTLS)
 		if err != nil {
