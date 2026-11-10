@@ -382,7 +382,7 @@ func (p *TCPProxy) authenticateWithShadow(shadowConn net.Conn) (net.Conn, error)
 	debugf(p.config, "authenticateWithShadow: extracted scramble (%d bytes)", len(scramble))
 
 	// The connection we'll use for auth (may be upgraded to TLS)
-	
+	authConn := shadowConn
 	seqNum := byte(1) // sequence number 1 (after handshake which was 0)
 
 	// Step 2: If TLS is enabled, send SSL request and upgrade connection
