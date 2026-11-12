@@ -1,0 +1,44 @@
+test-filter-integration.sh
+  s_5a0a09762195b1::t_59ce0c13f796ca 26
+  s_5a0a09762195b1::t_a5cc05523e09c4 145,147
+Dockerfile.dev
+  s_5a0a09762195b1::t_801b72c11b6159 4-5,11
+  s_5a0a09762195b1::t_07eb40f55e155c 21
+minikube/setup.sh
+  s_5a0a09762195b1::t_c414fa27e92394 99-100
+.github/workflows/ci.yml
+  s_5a0a09762195b1::t_b6a378d299b86f 48
+Makefile
+  s_5a0a09762195b1::t_2b92fcbf6f9360 4-5
+Dockerfile
+  s_5a0a09762195b1::t_5a71c191f4ceb9 32
+  s_5a0a09762195b1::t_f290006f092b97 10,15-16,22
+README.md
+  s_5a0a09762195b1::t_5fa4a44868e6a8 1,3,5,7-14,18,20-23,25,29-30,43-55,83-84,129-130,132,134,137,140,151-152,197-198,255,424-431,551-558,604-613,639
+.github/workflows/release.yml
+  s_5a0a09762195b1::t_19f793c6ca55df 46-47
+.gitignore
+  s_5a0a09762195b1::t_e11edc13791756 2-3
+docs/POSTGRES.md
+  s_5a0a09762195b1::t_f356fe70bf6c85 3,5,12-14,16,18,20-21,23,25-27,46-47,73,76,80-82,86,89,93,96,133
+go.mod
+  s_5a0a09762195b1::t_73df5c0ae048c0 1
+CONTRIBUTING.md
+  s_5a0a09762195b1::t_2a04603728fcdd 65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "dcaec965ab830ad4c3e7dfec70c75b6b20e7ba88",
+  "prompts": {},
+  "sessions": {
+    "s_5a0a09762195b1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01029122-aaff-49e1-a1f1-3dd3860b8e56",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Vijay <vijay@trmlabs.com>"
+    }
+  }
+}

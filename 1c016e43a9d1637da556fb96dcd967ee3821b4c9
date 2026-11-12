@@ -1,0 +1,81 @@
+monitoring/prometheus-alerts.yml
+  s_5a0a09762195b1::t_9e0f852ba1b97e 1-3
+test-filter-integration.sh
+  s_5a0a09762195b1::t_40cc73be8813e5 25
+docs/usage-patterns.md
+  s_5a0a09762195b1::t_f559895a717599 5-6
+  s_5a0a09762195b1::t_e586d9c3a9478e 166
+main.go
+  s_5a0a09762195b1::t_a17ee30375184c 1-4
+  s_5a0a09762195b1::t_617113e24421f2 32-33
+docker-compose.pg-tls.yaml
+  s_5a0a09762195b1::t_e3882b38b5433a 125
+  s_5a0a09762195b1::t_9c47275421b2de 81
+  s_5a0a09762195b1::t_1e7851e5a4fc6d 37
+pg_main.go
+  s_5a0a09762195b1::t_dc84cbb19e8f48 28-29
+test-pg-local-tls.sh
+  s_5a0a09762195b1::t_df87b6fa148931 52-53,56-57
+  s_5a0a09762195b1::t_ead1a79cb18311 114,125,131,139,149-153,160,164
+monitoring/prometheus.yml
+  s_5a0a09762195b1::t_1b18ca062e422e 1-3
+minikube/monitoring/grafana.yaml
+  s_5a0a09762195b1::t_ea3aa531b2b7ed 380
+minikube/setup.sh
+  s_5a0a09762195b1::t_4537a5319bef6b 101-102
+  s_5a0a09762195b1::t_269807def83a65 11
+  s_5a0a09762195b1::t_0947bcbf75f0d4 2
+  s_5a0a09762195b1::t_43d8504ecdd40c 154
+monitoring/grafana/dashboards/shadow-proxy.json
+  ai_agent 38,7198
+pg_proxy.go
+  s_5a0a09762195b1::t_f50c8a53f06c1f 3-15
+minikube/primary/shadow-proxy.yaml
+  s_5a0a09762195b1::t_fdec635c7b2c6e 50
+docs/POSTGRES.md
+  s_5a0a09762195b1::t_38e57c731e850f 97-101,103
+  s_5a0a09762195b1::t_6d0ce75b03d930 48-49,53-55,58-64
+Makefile
+  s_5a0a09762195b1::t_01d26c1d305b6e 97-99
+docker-compose.pg.yaml
+  s_5a0a09762195b1::t_b11052a68858db 25
+  s_5a0a09762195b1::t_2c2eed5badc631 54
+  s_5a0a09762195b1::t_d20bd6a930e275 84
+  s_5a0a09762195b1::t_7cdc1e61609f8c 96
+  s_5a0a09762195b1::t_21e586d938f391 6-10
+certs/generate-certs.sh
+  s_5a0a09762195b1::t_ffa7ac24fedf2d 63
+  s_5a0a09762195b1::t_f245307fdcc585 33-34
+CHANGELOG.md
+  s_5a0a09762195b1::t_10f4e784763bcc 10-19,22,26-34,36-39,42-43,45-46
+CONTRIBUTING.md
+  s_5a0a09762195b1::t_15859e3391d203 1
+.github/ISSUE_TEMPLATE/bug_report.md
+  s_5a0a09762195b1::t_c62510110730d2 24-26
+README.md
+  s_5a0a09762195b1::t_6eba847f1728cb 318
+  s_5a0a09762195b1::t_5a1d34dc04f6d3 50
+  s_5a0a09762195b1::t_fdd6d10a1b5120 247
+  s_5a0a09762195b1::t_55247be8d903a7 425
+  s_5a0a09762195b1::t_58233c2191ac40 633,642-652,655
+query_filter.go
+  s_5a0a09762195b1::t_cb75b905961339 2-7
+SECURITY.md
+  s_5a0a09762195b1::t_451183fa5cc955 22-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "1c016e43a9d1637da556fb96dcd967ee3821b4c9",
+  "prompts": {},
+  "sessions": {
+    "s_5a0a09762195b1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01029122-aaff-49e1-a1f1-3dd3860b8e56",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Vijay <vijay@trmlabs.com>"
+    }
+  }
+}
