@@ -1572,12 +1572,12 @@ func TestExtractPrimarySQLOperation_LargeQuery(t *testing.T) {
 	sb.WriteString("(col1, col2, col3, col4, col5)\n")
 	sb.WriteString("SELECT\n")
 	for i := 0; i < 100; i++ {
-		sb.WriteString(fmt.Sprintf("  COALESCE(t%d.field_%d, 0) AS col_%d,\n", i, i, i))
+		fmt.Fprintf(&sb, "  COALESCE(t%d.field_%d, 0) AS col_%d,\n", i, i, i)
 	}
 	sb.WriteString("  'final_value' AS last_col\n")
 	sb.WriteString("FROM source_table t0\n")
 	for i := 1; i < 50; i++ {
-		sb.WriteString(fmt.Sprintf("LEFT JOIN table_%d t%d ON t0.id = t%d.id\n", i, i, i))
+		fmt.Fprintf(&sb, "LEFT JOIN table_%d t%d ON t0.id = t%d.id\n", i, i, i)
 	}
 	sb.WriteString("WHERE t0.dt >= '2026-01-01'\n")
 	sb.WriteString("GROUP BY t0.category_id")

@@ -54,10 +54,10 @@ func runPostgresProxy(config *Config) {
 		log.Fatalf("Backend TLS config: %v", err)
 	}
 
-	primaryAddr := fmt.Sprintf("%s:%s", config.PrimaryHost, config.PrimaryPort)
+	primaryAddr := net.JoinHostPort(config.PrimaryHost, config.PrimaryPort)
 	var shadowAddr string
 	if config.ShadowHost != "" {
-		shadowAddr = fmt.Sprintf("%s:%s", config.ShadowHost, config.ShadowPort)
+		shadowAddr = net.JoinHostPort(config.ShadowHost, config.ShadowPort)
 	}
 
 	// 10s health probes feed primary_up / shadow_up gauges for alerting.
