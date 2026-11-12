@@ -66,8 +66,8 @@ func main() {
 		shadowHealthy  = false
 	)
 
-	primaryAddr := fmt.Sprintf("%s:%s", config.PrimaryHost, config.PrimaryPort)
-	shadowAddr := fmt.Sprintf("%s:%s", config.ShadowHost, config.ShadowPort)
+	primaryAddr := net.JoinHostPort(config.PrimaryHost, config.PrimaryPort)
+	shadowAddr := net.JoinHostPort(config.ShadowHost, config.ShadowPort)
 
 	// Background health checker
 	go func() {
