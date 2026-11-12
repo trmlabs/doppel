@@ -1,0 +1,25 @@
+main.go
+  s_cb2c52cd321f41::t_902fc4df9e06a5 69-70
+pg_main.go
+  s_cb2c52cd321f41::t_902fc4df9e06a5 57,60
+.github/workflows/ci.yml
+  s_cb2c52cd321f41::t_902fc4df9e06a5 38
+query_filter_test.go
+  s_cb2c52cd321f41::t_902fc4df9e06a5 1575,1580
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "035d59deb1653f9cbd4549bc9c97b8758a3d5b82",
+  "prompts": {},
+  "sessions": {
+    "s_cb2c52cd321f41": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "42c034e4-7f6e-4273-9b1b-386a85a5c9d5",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "malfattiftrm <felipe.malfatti@trmlabs.com>"
+    }
+  }
+}
